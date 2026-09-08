@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 7 17 31;
+    --foreground: 248 250 252;
+  }
+
+  body {
+    @apply bg-prime-bg text-prime-text font-sans antialiased overflow-x-hidden selection:bg-prime-blue selection:text-white;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #07111F;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1E3A5F;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2563EB;
+}
+
+/* Animations & Utilities */
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 12s linear infinite;
+}
+
+/* Scanline and Grid overlays */
+.cyber-grid {
+  background-image: 
+    linear-gradient(to right, rgba(37, 99, 235, 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(37, 99, 235, 0.07) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.cyber-radial-glow {
+  background: radial-gradient(circle at 50% 30%, rgba(37, 99, 235, 0.18) 0%, rgba(7, 17, 31, 0) 70%);
+}
+

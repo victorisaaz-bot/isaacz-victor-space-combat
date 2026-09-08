@@ -1,0 +1,1687 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Prime Edge — Space Combat Gun Game</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.4/dist/confetti.browser.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700;900&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            prime: {
+              blue: '#2563EB',
+              'blue-deep': '#1E3A8A',
+              'blue-light': '#60A5FA',
+              cyber: '#00F0FF',
+              bg: '#050B14',
+              'bg-card': '#0B1528',
+              'bg-elevated': '#101F38',
+              surface: '#0B1528',
+              border: '#1E3A5F',
+              'border-bright': '#3B82F6',
+              text: '#F8FAFC',
+              muted: '#94A3B8',
+              success: '#22C55E',
+              warning: '#F59E0B',
+              danger: '#EF4444',
+            }
+          },
+          boxShadow: {
+            'neon-blue': '0 0 15px rgba(37, 99, 235, 0.6), 0 0 30px rgba(56, 189, 248, 0.4)',
+            'neon-cyan': '0 0 15px rgba(0, 240, 255, 0.7), 0 0 30px rgba(0, 240, 255, 0.4)',
+            'neon-danger': '0 0 15px rgba(239, 68, 68, 0.7), 0 0 30px rgba(239, 68, 68, 0.4)',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #050B14;
+      color: #F8FAFC;
+      user-select: none;
+      -webkit-user-select: none;
+      overflow-x: hidden;
+    }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+    .cyber-grid {
+      background-image: 
+        radial-gradient(circle at 50% 50%, rgba(37, 99, 235, 0.1) 0%, transparent 80%),
+        linear-gradient(to right, rgba(37, 99, 235, 0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(37, 99, 235, 0.05) 1px, transparent 1px);
+      background-size: 100% 100%, 40px 40px, 40px 40px;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.85; transform: scale(1.03); }
+    }
+    .animate-pulse-glow { animation: pulse-glow 2s infinite ease-in-out; }
+    canvas { touch-action: none; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-prime-bg cyber-grid">
+
+  <!-- Main Navigation -->
+  <header id="main-nav" class="sticky top-0 z-40 w-full bg-prime-bg/90 backdrop-blur-xl border-b border-prime-border">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3 cursor-pointer" onclick="showView('home')">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-prime-blue to-cyan-400 flex items-center justify-center shadow-neon-blue">
+          <!-- Starfighter SVG Icon -->
+          <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2L9 9L3 13L9 14L10 21L12 18L14 21L15 14L21 13L15 9L12 2Z" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-xl font-black tracking-widest text-white">PRIME</span>
+            <span class="text-xl font-black tracking-widest text-prime-blue-light drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]">EDGE</span>
+          </div>
+          <p class="text-[10px] tracking-widest uppercase text-cyan-300 font-bold -mt-1">Space Combat Gun Game</p>
+        </div>
+      </div>
+
+      <nav class="hidden md:flex items-center gap-1 font-semibold text-sm">
+        <button onclick="showView('home')" class="nav-btn px-3.5 py-2 rounded-lg text-prime-muted hover:text-white transition-all">Home</button>
+        <button onclick="showView('play-select')" class="nav-btn px-3.5 py-2 rounded-lg text-prime-muted hover:text-white transition-all">Missions</button>
+        <button onclick="showView('leaderboard')" class="nav-btn px-3.5 py-2 rounded-lg text-prime-muted hover:text-white transition-all">Leaderboard</button>
+        <button onclick="showView('profile')" class="nav-btn px-3.5 py-2 rounded-lg text-prime-muted hover:text-white transition-all">Hangar</button>
+        <button onclick="showView('settings')" class="nav-btn px-3.5 py-2 rounded-lg text-prime-muted hover:text-white transition-all">Controls</button>
+      </nav>
+
+      <div class="flex items-center gap-3">
+        <button id="nav-mute-btn" onclick="toggleMute()" class="w-10 h-10 rounded-xl border border-prime-blue/40 bg-prime-blue/10 text-prime-blue-light flex items-center justify-center hover:bg-prime-blue/20 transition-all" title="Toggle Sound">
+          <svg id="sound-icon-on" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+          <svg id="sound-icon-off" class="w-5 h-5 hidden text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"></line><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M23 9l-6 6"></path><path d="M17 9l6 6"></path></svg>
+        </button>
+        <button onclick="showView('play-select')" class="px-5 py-2 rounded-xl text-sm font-black uppercase tracking-wider bg-gradient-to-r from-cyan-500 via-prime-blue to-blue-600 text-white shadow-neon-cyan border border-cyan-300/40 hover:scale-105 active:scale-95 transition-all">
+          Launch Ship
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Views Container -->
+  <main id="views-container" class="flex-1 flex flex-col relative w-full">
+
+    <!-- VIEW 1: HOME SCREEN -->
+    <section id="view-home" class="view-panel flex flex-col items-center w-full">
+      <div class="relative w-full py-16 md:py-24 flex flex-col items-center justify-center text-center px-4 overflow-hidden">
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-prime-blue/20 blur-[120px] rounded-full pointer-events-none"></div>
+
+        <div class="relative z-10 max-w-4xl mx-auto flex flex-col items-center">
+          <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-prime-surface/90 border border-cyan-400/40 text-xs font-bold text-cyan-300 uppercase tracking-widest mb-6 shadow-neon-cyan/30 shadow-sm animate-pulse-glow">
+            <span>🚀 PRIME EDGE &bull; INTERSTELLAR SPACE COMBAT</span>
+          </div>
+
+          <h1 class="text-4xl sm:text-6xl md:text-7xl font-black uppercase tracking-tight text-white mb-6 leading-none">
+            SPACE COMBAT <br/>
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-prime-blue-light to-blue-500 drop-shadow-[0_0_30px_rgba(0,240,255,0.7)]">GUN GAME</span>
+          </h1>
+
+          <p class="text-base sm:text-lg text-prime-muted max-w-2xl mb-8 leading-relaxed font-medium">
+            Pilot your advanced starfighter across alien-infested galaxies. Use <span class="text-cyan-300 font-bold">Arrow Keys / WASD</span> for full directional movement and <span class="text-cyan-300 font-bold">Spacebar</span> to blast enemy armadas, asteroids, and colossal Dreadnought Bosses!
+          </p>
+
+          <!-- Controls Quick Banner -->
+          <div class="flex flex-wrap justify-center items-center gap-3 bg-prime-bg-card/90 border border-prime-border px-6 py-3 rounded-2xl mb-10 text-xs font-mono text-slate-300">
+            <span class="text-prime-muted">FLIGHT CONTROLS:</span>
+            <kbd class="px-2.5 py-1 bg-slate-800 rounded border border-slate-700 text-white font-bold">&uarr; &darr; &larr; &rarr;</kbd>
+            <span class="text-prime-muted">or</span>
+            <kbd class="px-2.5 py-1 bg-slate-800 rounded border border-slate-700 text-white font-bold">W A S D</kbd>
+            <span class="text-slate-500">|</span>
+            <span class="text-prime-muted">FIRE GUN:</span>
+            <kbd class="px-3 py-1 bg-cyan-900/60 border border-cyan-400/60 text-cyan-200 font-bold">[ SPACEBAR ]</kbd>
+            <span class="text-slate-500">|</span>
+            <span class="text-prime-muted">BOMB:</span>
+            <kbd class="px-2 py-1 bg-red-900/40 border border-red-500/50 text-red-200 font-bold">[ B ]</kbd>
+          </div>
+
+          <div class="flex flex-col sm:flex-row items-center gap-4">
+            <button onclick="launchGame('classic', 'normal')" class="px-10 py-4 rounded-xl text-lg font-black uppercase tracking-wider bg-gradient-to-r from-cyan-400 via-prime-blue to-indigo-600 text-white border border-cyan-300/50 shadow-neon-cyan hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
+              <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12 2L9 9L3 13L9 14L10 21L12 18L14 21L15 14L21 13L15 9L12 2Z"/></svg>
+              <span>Launch Starfighter (Spacebar) &rarr;</span>
+            </button>
+            <button onclick="showView('play-select')" class="px-8 py-4 rounded-xl text-base font-bold uppercase tracking-wider bg-prime-surface hover:bg-prime-bg-elevated text-prime-text border border-prime-border hover:border-prime-border-bright transition-all">
+              Choose Mission Sector
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Combat Modes Showcase -->
+      <div class="w-full max-w-6xl px-4 py-8">
+        <h2 class="text-2xl font-black uppercase tracking-wider text-white mb-6">Combat Sectors</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div onclick="launchGame('classic', 'normal')" class="p-5 rounded-2xl bg-prime-surface border border-prime-border hover:border-cyan-400 hover:shadow-neon-cyan/40 transition-all cursor-pointer">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-cyan-400 bg-cyan-500/10 px-2.5 py-0.5 rounded-full border border-cyan-500/30">Campaign Mode</span>
+            <h3 class="text-lg font-black uppercase text-white mt-3 mb-1">Sector Defense</h3>
+            <p class="text-xs text-prime-muted mb-4">Annihilate waves of alien cruisers, drones, and asteroids across deep space sectors.</p>
+            <span class="text-xs font-bold text-cyan-300 uppercase tracking-wider">Engage Sector &rarr;</span>
+          </div>
+
+          <div onclick="launchGame('boss-rush', 'normal')" class="p-5 rounded-2xl bg-prime-surface border border-prime-border hover:border-red-500/60 hover:shadow-neon-danger transition-all cursor-pointer">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-rose-400 bg-rose-500/10 px-2.5 py-0.5 rounded-full border border-rose-500/30">Boss Battles</span>
+            <h3 class="text-lg font-black uppercase text-white mt-3 mb-1">Boss Armada</h3>
+            <p class="text-xs text-prime-muted mb-4">Face massive multi-turret alien Flagship Motherships and dreadnoughts.</p>
+            <span class="text-xs font-bold text-rose-400 uppercase tracking-wider">Engage Boss &rarr;</span>
+          </div>
+
+          <div onclick="launchGame('survival', 'normal')" class="p-5 rounded-2xl bg-prime-surface border border-prime-border hover:border-amber-500/60 hover:shadow-lg transition-all cursor-pointer">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/30">Endless Waves</span>
+            <h3 class="text-lg font-black uppercase text-white mt-3 mb-1">Deep Space Survival</h3>
+            <p class="text-xs text-prime-muted mb-4">Continuous barrage of enemy fighters and asteroid storms. How long can you survive?</p>
+            <span class="text-xs font-bold text-amber-400 uppercase tracking-wider">Engage Survival &rarr;</span>
+          </div>
+
+          <div onclick="launchGame('time-attack', 'normal')" class="p-5 rounded-2xl bg-prime-surface border border-prime-border hover:border-prime-blue-light hover:shadow-neon-blue/30 transition-all cursor-pointer">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 px-2.5 py-0.5 rounded-full border border-blue-500/30">High Speed</span>
+            <h3 class="text-lg font-black uppercase text-white mt-3 mb-1">Hyperspace Rush</h3>
+            <p class="text-xs text-prime-muted mb-4">Score maximum kills before hyperspace time runs out. Fast kills add bonus time!</p>
+            <span class="text-xs font-bold text-prime-blue-light uppercase tracking-wider">Engage Rush &rarr;</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 2: PLAY SELECTION -->
+    <section id="view-play-select" class="view-panel hidden max-w-6xl mx-auto px-4 py-10 w-full">
+      <div class="text-center max-w-xl mx-auto mb-10">
+        <h1 class="text-3xl sm:text-5xl font-black uppercase text-white tracking-tight">Mission Setup</h1>
+        <p class="text-sm text-prime-muted mt-2">Configure space sector and difficulty rating before launch.</p>
+      </div>
+
+      <div class="mb-8">
+        <h2 class="text-xs uppercase font-bold text-cyan-300 tracking-widest mb-3">1. Select Mission Mode</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="mode-selector-container"></div>
+      </div>
+
+      <div class="mb-8">
+        <h2 class="text-xs uppercase font-bold text-cyan-300 tracking-widest mb-3">2. Select Threat Level (Difficulty)</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="diff-selector-container"></div>
+      </div>
+
+      <div class="p-6 rounded-2xl bg-prime-surface border border-cyan-400/50 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div>
+          <h3 id="selected-briefing-title" class="text-xl font-black text-white uppercase">Sector Defense &bull; Operative</h3>
+          <p id="selected-briefing-desc" class="text-xs text-prime-muted mt-1">Arrow keys for flight &bull; Spacebar to shoot &bull; 1.5x score</p>
+        </div>
+        <button onclick="startSelectedGame()" class="w-full sm:w-auto px-10 py-4 rounded-xl text-lg font-black uppercase bg-gradient-to-r from-cyan-400 via-prime-blue to-indigo-600 text-white shadow-neon-cyan hover:scale-105 active:scale-95 transition-all">
+          Deploy Starfighter &rarr;
+        </button>
+      </div>
+    </section>
+
+    <!-- VIEW 3: FULLSCREEN SPACE COMBAT ARENA -->
+    <section id="view-arena" class="view-panel hidden relative w-full h-[calc(100vh-4rem)] min-h-[500px] overflow-hidden bg-black select-none">
+      <canvas id="game-canvas" class="absolute inset-0 w-full h-full"></canvas>
+
+      <!-- Tactical Space Combat HUD -->
+      <div class="absolute inset-0 pointer-events-none p-4 sm:p-6 flex flex-col justify-between z-30">
+        <!-- Top Row HUD -->
+        <div class="flex items-start justify-between gap-4">
+          <!-- Left: Mission Status & Shields -->
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center gap-2 pointer-events-auto">
+              <button onclick="pauseGame()" class="p-2.5 rounded-xl bg-prime-surface/90 border border-prime-border hover:border-cyan-400 text-white transition-all shadow-lg active:scale-95" title="Pause [Esc / P]">
+                <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+              </button>
+              <div class="bg-prime-surface/85 backdrop-blur px-3.5 py-1.5 rounded-xl border border-prime-border text-xs font-bold text-white flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                <span id="hud-wave-label">WAVE 1</span>
+              </div>
+            </div>
+
+            <!-- Health & Shields Gauge -->
+            <div class="bg-prime-surface/90 backdrop-blur p-3 rounded-2xl border border-prime-border w-56 space-y-2">
+              <!-- Shield Bar -->
+              <div>
+                <div class="flex justify-between text-[10px] font-mono font-bold text-cyan-300 mb-0.5">
+                  <span>SHIELD BARRIER</span>
+                  <span id="hud-shield-num">100%</span>
+                </div>
+                <div class="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-cyan-900/50">
+                  <div id="hud-shield-bar" class="h-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all duration-150" style="width: 100%"></div>
+                </div>
+              </div>
+
+              <!-- Hull Armor Bar -->
+              <div>
+                <div class="flex justify-between text-[10px] font-mono font-bold text-emerald-400 mb-0.5">
+                  <span>HULL ARMOR</span>
+                  <span id="hud-hull-num">100 HP</span>
+                </div>
+                <div class="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-emerald-900/50">
+                  <div id="hud-hull-bar" class="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 transition-all duration-150" style="width: 100%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Center: Score & Combo Streak -->
+          <div class="flex flex-col items-center">
+            <div class="bg-prime-surface/90 backdrop-blur px-6 py-2 rounded-2xl border border-cyan-400/40 shadow-neon-cyan flex flex-col items-center">
+              <span class="text-[10px] uppercase tracking-widest text-cyan-300 font-bold">COMBAT SCORE</span>
+              <span id="hud-score" class="text-2xl sm:text-3xl font-black font-mono text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]">0</span>
+            </div>
+            <div id="hud-combo-badge" class="hidden mt-2 bg-gradient-to-r from-prime-blue-deep to-cyan-900 border border-cyan-400/50 px-3.5 py-0.5 rounded-full text-xs font-black text-cyan-200 shadow-neon-cyan animate-bounce">
+              KILL STREAK &times;2
+            </div>
+          </div>
+
+          <!-- Right: Weapon Tier & Super Bombs -->
+          <div class="flex flex-col items-end gap-2">
+            <div class="bg-prime-surface/90 backdrop-blur px-4 py-2 rounded-2xl border border-prime-border text-right font-mono">
+              <span class="text-[10px] text-prime-muted uppercase font-bold block">WEAPON CANNON</span>
+              <span id="hud-weapon-tier" class="text-sm font-black text-cyan-300">LVL 1 DUAL PLASMA</span>
+            </div>
+
+            <!-- Super Bombs Counter -->
+            <div class="bg-prime-surface/90 backdrop-blur px-4 py-1.5 rounded-2xl border border-red-500/40 flex items-center gap-2">
+              <span class="text-[10px] font-bold uppercase text-red-400">EMP BOMBS [B]</span>
+              <div id="hud-bombs-container" class="flex gap-1">
+                <span class="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_6px_#EF4444]"></span>
+                <span class="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_6px_#EF4444]"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Boss Health Bar (Hidden until boss wave) -->
+        <div id="boss-hud-container" class="hidden w-full max-w-lg mx-auto bg-prime-surface/95 p-3 rounded-2xl border-2 border-red-500 shadow-neon-danger">
+          <div class="flex justify-between items-center text-xs font-black uppercase text-red-400 mb-1">
+            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span> ALIEN DREADNOUGHT BOSS</span>
+            <span id="boss-hp-num" class="font-mono">100%</span>
+          </div>
+          <div class="w-full h-3 bg-slate-900 rounded-full overflow-hidden border border-red-700">
+            <div id="boss-hp-bar" class="h-full bg-gradient-to-r from-amber-500 via-rose-500 to-red-600 transition-all duration-100" style="width: 100%"></div>
+          </div>
+        </div>
+
+        <!-- Bottom Controls Legend / Mobile D-Pad Hint -->
+        <div class="flex items-end justify-between text-xs font-mono text-slate-400">
+          <div class="hidden sm:block bg-prime-surface/75 backdrop-blur px-3 py-1.5 rounded-xl border border-prime-border">
+            <span>FLIGHT: <strong class="text-white">&uarr;&darr;&larr;&rarr; / WASD</strong></span>
+            <span class="mx-2">&bull;</span>
+            <span>FIRE: <strong class="text-cyan-300">[SPACEBAR]</strong></span>
+            <span class="mx-2">&bull;</span>
+            <span>BOMB: <strong class="text-red-400">[B]</strong></span>
+          </div>
+
+          <div class="sm:hidden text-center text-[10px] text-cyan-300 bg-prime-surface/80 px-3 py-1 rounded-full">
+            Touch to steer &bull; Auto-fire active
+          </div>
+        </div>
+      </div>
+
+      <!-- Countdown Overlay -->
+      <div id="countdown-modal" class="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm pointer-events-none">
+        <div class="text-center">
+          <div class="text-xs uppercase tracking-[0.4em] text-cyan-300 font-bold mb-3 animate-pulse">WARP DRIVE ENGAGING</div>
+          <div id="countdown-number" class="text-8xl sm:text-9xl font-black text-white drop-shadow-[0_0_40px_rgba(0,240,255,0.9)]">3</div>
+        </div>
+      </div>
+
+      <!-- Pause Menu -->
+      <div id="pause-modal" class="hidden absolute inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
+        <div class="max-w-md w-full bg-prime-surface border border-prime-border rounded-3xl p-6 sm:p-8 text-center shadow-2xl">
+          <h2 class="text-3xl font-black uppercase text-white mb-2">Simulation Paused</h2>
+          <p class="text-xs text-prime-muted mb-6">Starfighter suspended in orbit. Resume when ready.</p>
+          <div class="space-y-3">
+            <button onclick="resumeGame()" class="w-full py-3.5 rounded-xl font-black uppercase bg-gradient-to-r from-cyan-400 to-prime-blue text-white shadow-neon-cyan">Resume Mission [Esc]</button>
+            <button onclick="restartGame()" class="w-full py-3 rounded-xl font-bold uppercase bg-prime-bg-card border border-prime-border text-slate-200">Restart Mission</button>
+            <button onclick="showView('play-select')" class="w-full py-2.5 text-xs font-bold uppercase text-prime-muted hover:text-white">Exit to Hangar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results / Game Over Debrief -->
+      <div id="results-modal" class="hidden absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-lg p-4 overflow-y-auto">
+        <div class="max-w-xl w-full bg-prime-surface border border-cyan-400/40 rounded-3xl p-6 sm:p-8 shadow-2xl my-auto">
+          <div class="flex items-center justify-between border-b border-prime-border pb-4 mb-6">
+            <div>
+              <span class="text-xs font-bold uppercase text-cyan-300" id="res-mode-badge">SECTOR DEFENSE</span>
+              <h2 class="text-2xl sm:text-3xl font-black uppercase text-white" id="res-status-title">Mission Complete</h2>
+            </div>
+            <div id="res-grade-badge" class="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-400 to-prime-blue text-white font-black text-3xl flex items-center justify-center shadow-neon-cyan border border-white/40 rotate-2">
+              S+
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 mb-6">
+            <div class="p-4 rounded-2xl bg-prime-bg border border-cyan-400/30">
+              <span class="text-xs font-bold uppercase text-cyan-300">Combat Score</span>
+              <div id="res-score" class="text-3xl font-black font-mono text-white mt-1">24,800</div>
+            </div>
+            <div class="p-4 rounded-2xl bg-prime-bg border border-prime-border">
+              <span class="text-xs font-bold uppercase text-emerald-400">Enemies Destroyed</span>
+              <div id="res-kills" class="text-3xl font-black font-mono text-emerald-400 mt-1">68</div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-3 text-center text-xs font-mono mb-6">
+            <div class="p-2.5 rounded-xl bg-prime-bg-card border border-prime-border">
+              <span class="text-[10px] text-prime-muted block">WAVE REACHED</span>
+              <span id="res-waves" class="font-bold text-white text-sm">Wave 6</span>
+            </div>
+            <div class="p-2.5 rounded-xl bg-prime-bg-card border border-prime-border">
+              <span class="text-[10px] text-prime-muted block">MAX STREAK</span>
+              <span id="res-streak" class="font-bold text-cyan-300 text-sm">24x</span>
+            </div>
+            <div class="p-2.5 rounded-xl bg-prime-bg-card border border-prime-border">
+              <span class="text-[10px] text-prime-muted block">ACCURACY</span>
+              <span id="res-accuracy" class="font-bold text-amber-300 text-sm">92.4%</span>
+            </div>
+          </div>
+
+          <!-- Submit Score to Leaderboard -->
+          <div class="p-4 rounded-2xl bg-prime-bg-card border border-prime-border mb-6">
+            <label class="text-xs font-bold uppercase text-white block mb-2">Record Pilot Callsign</label>
+            <div class="flex gap-2">
+              <input type="text" id="res-player-name" placeholder="Pilot Name" class="flex-1 bg-prime-bg border border-prime-border rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-400">
+              <button onclick="saveMatchScore()" id="res-save-btn" class="px-5 py-2 bg-gradient-to-r from-cyan-500 to-prime-blue hover:brightness-110 text-white rounded-xl text-xs font-bold uppercase">Save Record</button>
+            </div>
+          </div>
+
+          <div class="flex gap-3">
+            <button onclick="restartGame()" class="flex-1 py-3.5 rounded-xl font-black uppercase bg-gradient-to-r from-cyan-400 to-prime-blue text-white shadow-neon-cyan">Sortie Again (Space)</button>
+            <button onclick="showView('play-select')" class="flex-1 py-3.5 rounded-xl font-bold uppercase bg-prime-bg-card border border-prime-border text-slate-200">Hangar Menu</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 4: LEADERBOARD -->
+    <section id="view-leaderboard" class="view-panel hidden max-w-6xl mx-auto px-4 py-10 w-full">
+      <div class="text-center max-w-xl mx-auto mb-8">
+        <h1 class="text-3xl sm:text-5xl font-black uppercase text-white tracking-tight">Pilot Leaderboard</h1>
+        <p class="text-sm text-prime-muted mt-2">Verified combat scores across all space sectors.</p>
+      </div>
+      <div class="bg-prime-surface border border-prime-border rounded-2xl overflow-hidden shadow-xl">
+        <table class="w-full text-left text-xs font-mono">
+          <thead class="bg-prime-bg-card text-prime-muted uppercase border-b border-prime-border">
+            <tr>
+              <th class="py-3 px-4">Rank</th>
+              <th class="py-3 px-4">Pilot</th>
+              <th class="py-3 px-4">Sector Mode</th>
+              <th class="py-3 px-4">Threat Tier</th>
+              <th class="py-3 px-4 text-right">Score</th>
+              <th class="py-3 px-4 text-right">Kills</th>
+              <th class="py-3 px-4 text-center">Grade</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-tbody" class="divide-y divide-prime-border/50"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- VIEW 5: PROFILE / HANGAR -->
+    <section id="view-profile" class="view-panel hidden max-w-6xl mx-auto px-4 py-10 w-full">
+      <div class="p-6 sm:p-8 rounded-3xl bg-prime-surface border border-cyan-400/40 mb-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div class="flex items-center gap-4">
+          <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-cyan-400 to-prime-blue flex flex-col items-center justify-center font-mono text-white shadow-neon-cyan">
+            <span class="text-[9px] uppercase font-bold text-cyan-200">PILOT LVL</span>
+            <span id="prof-level" class="text-3xl font-black">1</span>
+          </div>
+          <div>
+            <h1 id="prof-name" class="text-2xl font-black text-white uppercase">Ace Pilot</h1>
+            <span id="prof-title" class="text-xs font-bold text-cyan-300 bg-cyan-500/10 px-2.5 py-0.5 rounded-full border border-cyan-500/30">Star Interceptor Wingman</span>
+          </div>
+        </div>
+        <div class="text-right font-mono">
+          <span class="text-xs text-prime-muted uppercase">Total Combat Score</span>
+          <div id="prof-career-score" class="text-3xl font-black text-white">0</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8 text-center font-mono">
+        <div class="p-4 rounded-2xl bg-prime-surface border border-prime-border">
+          <span class="text-[10px] text-prime-muted uppercase block">Sorties Flown</span>
+          <span id="prof-games" class="text-2xl font-black text-white">0</span>
+        </div>
+        <div class="p-4 rounded-2xl bg-prime-surface border border-prime-border">
+          <span class="text-[10px] text-prime-muted uppercase block">Total Kills</span>
+          <span id="prof-kills" class="text-2xl font-black text-emerald-400">0</span>
+        </div>
+        <div class="p-4 rounded-2xl bg-prime-surface border border-prime-border">
+          <span class="text-[10px] text-prime-muted uppercase block">High Score</span>
+          <span id="prof-best-score" class="text-2xl font-black text-amber-300">0</span>
+        </div>
+        <div class="p-4 rounded-2xl bg-prime-surface border border-prime-border">
+          <span class="text-[10px] text-prime-muted uppercase block">Max Kill Streak</span>
+          <span id="prof-best-combo" class="text-2xl font-black text-cyan-300">0x</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 6: CONTROLS & SETTINGS -->
+    <section id="view-settings" class="view-panel hidden max-w-3xl mx-auto px-4 py-10 w-full space-y-6">
+      <div class="text-center max-w-xl mx-auto mb-8">
+        <h1 class="text-3xl sm:text-5xl font-black uppercase text-white tracking-tight">Flight Controls</h1>
+      </div>
+      <div class="p-6 rounded-2xl bg-prime-surface border border-prime-border space-y-4 font-mono text-sm">
+        <div class="flex justify-between items-center p-3 rounded-xl bg-prime-bg border border-prime-border">
+          <span class="text-slate-300">Move Starfighter</span>
+          <kbd class="px-2 py-1 bg-slate-800 rounded border border-slate-700 text-cyan-300 font-bold">Arrow Keys (&uarr; &darr; &larr; &rarr;) or WASD</kbd>
+        </div>
+        <div class="flex justify-between items-center p-3 rounded-xl bg-prime-bg border border-prime-border">
+          <span class="text-slate-300">Fire Plasma Blasters</span>
+          <kbd class="px-2 py-1 bg-cyan-900/60 rounded border border-cyan-400/60 text-cyan-200 font-bold">Spacebar (Hold for Rapid Fire)</kbd>
+        </div>
+        <div class="flex justify-between items-center p-3 rounded-xl bg-prime-bg border border-prime-border">
+          <span class="text-slate-300">Deploy EMP Screen-Nuke</span>
+          <kbd class="px-2 py-1 bg-red-900/50 rounded border border-red-500/50 text-red-300 font-bold">[ B ] / [ E ]</kbd>
+        </div>
+        <div class="flex justify-between items-center p-3 rounded-xl bg-prime-bg border border-prime-border">
+          <span class="text-slate-300">Pause Starflight</span>
+          <kbd class="px-2 py-1 bg-slate-800 rounded border border-slate-700 text-white font-bold">[ Esc ] / [ P ]</kbd>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // PROCEDURAL WEB AUDIO SYNTHESIZER
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.isMuted = false;
+        this.musicPlaying = false;
+        this.musicInterval = null;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+      }
+      playLaser() {
+        if (this.isMuted) return;
+        this.init();
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(880, t);
+        osc.frequency.exponentialRampToValueAtTime(110, t + 0.08);
+        gain.gain.setValueAtTime(0.25, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.08);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.08);
+      }
+      playExplosion() {
+        if (this.isMuted) return;
+        this.init();
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(140, t);
+        osc.frequency.exponentialRampToValueAtTime(30, t + 0.25);
+        gain.gain.setValueAtTime(0.6, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.25);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.25);
+      }
+      playHit() {
+        if (this.isMuted) return;
+        this.init();
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(350, t);
+        osc.frequency.exponentialRampToValueAtTime(100, t + 0.06);
+        gain.gain.setValueAtTime(0.4, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.06);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.06);
+      }
+      playPowerup() {
+        if (this.isMuted) return;
+        this.init();
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(523, t);
+        osc.frequency.exponentialRampToValueAtTime(1046, t + 0.18);
+        gain.gain.setValueAtTime(0.5, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.2);
+      }
+      playBomb() {
+        if (this.isMuted) return;
+        this.init();
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(220, t);
+        osc.frequency.exponentialRampToValueAtTime(40, t + 0.5);
+        gain.gain.setValueAtTime(0.8, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.5);
+      }
+      playBeep() {
+        if (this.isMuted) return;
+        this.init();
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587, t);
+        gain.gain.setValueAtTime(0.35, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.1);
+      }
+      playGo() {
+        if (this.isMuted) return;
+        this.init();
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(1046, t);
+        gain.gain.setValueAtTime(0.6, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.3);
+      }
+      startSpaceMusic() {
+        if (this.musicPlaying || this.isMuted) return;
+        this.init();
+        this.musicPlaying = true;
+        const notes = [110, 130.81, 146.83, 164.81, 220];
+        let idx = 0;
+        this.musicInterval = setInterval(() => {
+          if (!this.musicPlaying || this.isMuted) return;
+          const t = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(notes[idx % notes.length], t);
+          idx++;
+          gain.gain.setValueAtTime(0.08, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.28);
+        }, 320);
+      }
+      stopMusic() {
+        this.musicPlaying = false;
+        if (this.musicInterval) {
+          clearInterval(this.musicInterval);
+          this.musicInterval = null;
+        }
+      }
+    }
+    const sound = new SoundEngine();
+
+    function toggleMute() {
+      sound.isMuted = !sound.isMuted;
+      if (sound.isMuted) sound.stopMusic();
+      else if (gameActive && !gamePaused) sound.startSpaceMusic();
+      document.getElementById('sound-icon-on').classList.toggle('hidden', sound.isMuted);
+      document.getElementById('sound-icon-off').classList.toggle('hidden', !sound.isMuted);
+    }
+
+    // GAME CONFIGURATIONS
+    const MODES = {
+      classic: { name: "Sector Defense", desc: "Wave-based alien fleet assaults", waves: 10 },
+      "boss-rush": { name: "Boss Armada", desc: "Face massive Dreadnought Bosses", waves: 5 },
+      survival: { name: "Deep Space Survival", desc: "Endless asteroid & armada storms", waves: 99 },
+      "time-attack": { name: "Hyperspace Rush", desc: "Race against hyperspace timer", waves: 10 }
+    };
+    const DIFFS = {
+      easy: { name: "Recruit", mult: 1.0, enemySpd: 1.0, spawnRate: 1400 },
+      normal: { name: "Operative", mult: 1.5, enemySpd: 1.4, spawnRate: 1000 },
+      hard: { name: "Elite", mult: 2.2, enemySpd: 1.9, spawnRate: 750 },
+      extreme: { name: "Prime Edge", mult: 3.2, enemySpd: 2.5, spawnRate: 500 }
+    };
+
+    let selectedMode = 'classic';
+    let selectedDiff = 'normal';
+
+    // INPUT STATE (Arrow Keys, WASD, Spacebar)
+    const keys = {
+      ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false,
+      KeyW: false, KeyS: false, KeyA: false, KeyD: false,
+      Space: false, KeyB: false, KeyE: false
+    };
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code in keys) {
+        keys[e.code] = true;
+        e.preventDefault();
+      }
+      if (e.code === 'KeyB' || e.code === 'KeyE') {
+        deployBomb();
+      }
+      if (e.code === 'Escape' || e.code === 'KeyP') {
+        if (gameActive) gamePaused ? resumeGame() : pauseGame();
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (e.code in keys) {
+        keys[e.code] = false;
+        e.preventDefault();
+      }
+    });
+
+    // GAME ENGINE STATE
+    let gameActive = false;
+    let gamePaused = false;
+    let animationFrame = null;
+
+    let score = 0;
+    let kills = 0;
+    let shotsFired = 0;
+    let shotsHit = 0;
+    let combo = 0;
+    let bestCombo = 0;
+    let currentWave = 1;
+    let waveKills = 0;
+    let waveKillsNeeded = 12;
+    let bombsCount = 2;
+    let weaponLevel = 1;
+
+    // Entities
+    let player = {
+      x: 0, y: 0,
+      width: 40, height: 46,
+      vx: 0, vy: 0,
+      speed: 6.5,
+      shield: 100, maxShield: 100,
+      hull: 100, maxHull: 100,
+      invulnerable: 0,
+      lastShotTime: 0,
+      fireRateMs: 140
+    };
+
+    let bullets = [];
+    let enemyBullets = [];
+    let enemies = [];
+    let asteroids = [];
+    let powerups = [];
+    let particles = [];
+    let floatingTexts = [];
+    let stars = [];
+    let boss = null;
+    let lastEnemySpawn = 0;
+    let screenShake = 0;
+
+    // View Navigation
+    function showView(viewId) {
+      if (animationFrame) cancelAnimationFrame(animationFrame);
+      gameActive = false;
+      sound.stopMusic();
+      document.querySelectorAll('.view-panel').forEach(el => el.classList.add('hidden'));
+      const active = document.getElementById('view-' + viewId);
+      if (active) active.classList.remove('hidden');
+
+      const isArena = viewId === 'arena';
+      document.getElementById('main-nav').style.display = isArena ? 'none' : 'block';
+
+      if (viewId === 'play-select') renderSetupSelectors();
+      if (viewId === 'leaderboard') renderLeaderboard();
+      if (viewId === 'profile') renderProfile();
+    }
+
+    function renderSetupSelectors() {
+      const modeContainer = document.getElementById('mode-selector-container');
+      modeContainer.innerHTML = Object.entries(MODES).map(([id, m]) => `
+        <div onclick="selectMode('${id}')" class="p-4 rounded-2xl border cursor-pointer select-none ${selectedMode === id ? 'bg-prime-surface border-cyan-400 shadow-neon-cyan ring-1 ring-cyan-400' : 'bg-prime-surface/60 border-prime-border hover:border-prime-border-bright'}">
+          <h3 class="font-bold text-white uppercase text-base">${m.name}</h3>
+          <p class="text-xs text-prime-muted mt-1">${m.desc}</p>
+        </div>
+      `).join('');
+
+      const diffContainer = document.getElementById('diff-selector-container');
+      diffContainer.innerHTML = Object.entries(DIFFS).map(([id, d]) => `
+        <div onclick="selectDiff('${id}')" class="p-4 rounded-2xl border cursor-pointer select-none ${selectedDiff === id ? 'bg-prime-surface border-white/70 shadow-lg ring-1 ring-white/70' : 'bg-prime-surface/60 border-prime-border hover:border-prime-border-bright'}">
+          <h3 class="font-bold text-white uppercase text-base">${d.name}</h3>
+          <p class="text-xs text-cyan-300 font-mono mt-1">${d.mult}x Combat Multiplier</p>
+        </div>
+      `).join('');
+
+      document.getElementById('selected-briefing-title').textContent = `${MODES[selectedMode].name} • ${DIFFS[selectedDiff].name}`;
+      document.getElementById('selected-briefing-desc').textContent = `Arrow keys / WASD to fly • Spacebar to blast • ${DIFFS[selectedDiff].mult}x score`;
+    }
+
+    function selectMode(id) { selectedMode = id; renderSetupSelectors(); }
+    function selectDiff(id) { selectedDiff = id; renderSetupSelectors(); }
+
+    function launchGame(mode, diff) {
+      selectedMode = mode || 'classic';
+      selectedDiff = diff || 'normal';
+      startSelectedGame();
+    }
+
+    function initStars(w, h) {
+      stars = [];
+      for (let i = 0; i < 90; i++) {
+        stars.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          size: Math.random() * 2 + 0.5,
+          speed: Math.random() * 2 + 0.5,
+          color: Math.random() > 0.3 ? '#FFFFFF' : '#38BDF8'
+        });
+      }
+    }
+
+    function startSelectedGame() {
+      showView('arena');
+      const canvas = document.getElementById('game-canvas');
+      const w = canvas.parentElement.clientWidth;
+      const h = canvas.parentElement.clientHeight;
+      canvas.width = w;
+      canvas.height = h;
+
+      initStars(w, h);
+
+      // Reset Player
+      player.x = w / 2;
+      player.y = h * 0.8;
+      player.vx = 0;
+      player.vy = 0;
+      player.shield = 100;
+      player.hull = 100;
+      player.invulnerable = 1.5;
+      weaponLevel = 1;
+      bombsCount = 2;
+
+      score = 0;
+      kills = 0;
+      shotsFired = 0;
+      shotsHit = 0;
+      combo = 0;
+      bestCombo = 0;
+      currentWave = 1;
+      waveKills = 0;
+      waveKillsNeeded = selectedMode === 'boss-rush' ? 2 : 12;
+
+      bullets = [];
+      enemyBullets = [];
+      enemies = [];
+      asteroids = [];
+      powerups = [];
+      particles = [];
+      floatingTexts = [];
+      boss = null;
+      lastEnemySpawn = performance.now();
+      gameActive = false;
+      gamePaused = false;
+
+      updateHUD();
+      document.getElementById('boss-hud-container').classList.add('hidden');
+      document.getElementById('pause-modal').classList.add('hidden');
+      document.getElementById('results-modal').classList.add('hidden');
+
+      // Countdown (3-2-1-GO)
+      const countModal = document.getElementById('countdown-modal');
+      const countNum = document.getElementById('countdown-number');
+      countModal.classList.remove('hidden');
+
+      let c = 3;
+      countNum.textContent = c;
+      sound.playBeep();
+
+      const cd = setInterval(() => {
+        c--;
+        if (c > 0) {
+          countNum.textContent = c;
+          sound.playBeep();
+        } else if (c === 0) {
+          countNum.textContent = "WARP!";
+          sound.playGo();
+        } else {
+          clearInterval(cd);
+          countModal.classList.add('hidden');
+          gameActive = true;
+          sound.startSpaceMusic();
+          if (selectedMode === 'boss-rush') spawnBoss(w);
+          startGameLoop();
+        }
+      }, 750);
+    }
+
+    // MAIN 60 FPS GAME LOOP
+    function startGameLoop() {
+      const canvas = document.getElementById('game-canvas');
+      const ctx = canvas.getContext('2d');
+      let lastTime = performance.now();
+
+      function loop(currentTime) {
+        if (!gameActive) return;
+        const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
+        lastTime = currentTime;
+
+        if (!gamePaused) {
+          const w = canvas.parentElement.clientWidth;
+          const h = canvas.parentElement.clientHeight;
+          if (canvas.width !== w || canvas.height !== h) {
+            canvas.width = w; canvas.height = h;
+          }
+
+          // Screen Shake decay
+          let shakeX = 0, shakeY = 0;
+          if (screenShake > 0) {
+            shakeX = (Math.random() - 0.5) * screenShake;
+            shakeY = (Math.random() - 0.5) * screenShake;
+            screenShake = Math.max(0, screenShake - dt * 25);
+          }
+
+          ctx.save();
+          ctx.translate(shakeX, shakeY);
+          ctx.clearRect(-20, -20, w + 40, h + 40);
+
+          // 1. UPDATE & RENDER PARALLAX STARFIELD
+          for (const s of stars) {
+            s.y += s.speed * (boss ? 4 : 1.5);
+            if (s.y > h) { s.y = 0; s.x = Math.random() * w; }
+            ctx.fillStyle = s.color;
+            ctx.fillRect(s.x, s.y, s.size, s.size + (boss ? 4 : 0));
+          }
+
+          // 2. PLAYER MOVEMENT (Arrow Keys & WASD)
+          const moveUp = keys.ArrowUp || keys.KeyW;
+          const moveDown = keys.ArrowDown || keys.KeyS;
+          const moveLeft = keys.ArrowLeft || keys.KeyA;
+          const moveRight = keys.ArrowRight || keys.KeyD;
+
+          let targetVx = 0;
+          let targetVy = 0;
+          if (moveLeft) targetVx -= player.speed;
+          if (moveRight) targetVx += player.speed;
+          if (moveUp) targetVy -= player.speed;
+          if (moveDown) targetVy += player.speed;
+
+          // Smooth inertia acceleration
+          player.vx += (targetVx - player.vx) * 0.25;
+          player.vy += (targetVy - player.vy) * 0.25;
+          player.x += player.vx;
+          player.y += player.vy;
+
+          // Clamping to Arena Viewport
+          player.x = Math.max(25, Math.min(w - 25, player.x));
+          player.y = Math.max(30, Math.min(h - 30, player.y));
+
+          // Shield Passive Recharge (0.8 HP/sec if not damaged recently)
+          if (player.shield < player.maxShield) {
+            player.shield = Math.min(player.maxShield, player.shield + dt * 2.5);
+            updateHUD();
+          }
+
+          if (player.invulnerable > 0) player.invulnerable -= dt;
+
+          // 3. WEAPON FIRING (Spacebar)
+          if (keys.Space && currentTime - player.lastShotTime >= player.fireRateMs) {
+            firePlayerGuns(currentTime);
+          }
+
+          // Engine Thruster Particles
+          addEngineThrust(player.x, player.y + 20, player.vx);
+
+          // 4. SPAWN ENEMIES & ASTEROIDS
+          const diffCfg = DIFFS[selectedDiff];
+          if (!boss && currentTime - lastEnemySpawn >= diffCfg.spawnRate) {
+            spawnEnemyFleet(w);
+            lastEnemySpawn = currentTime;
+          }
+
+          // 5. UPDATE BULLETS
+          // Player Bullets
+          bullets = bullets.filter(b => {
+            b.y += b.vy;
+            b.x += b.vx || 0;
+
+            // Render Laser
+            ctx.save();
+            ctx.fillStyle = b.color || '#00F0FF';
+            ctx.shadowColor = b.color || '#00F0FF';
+            ctx.shadowBlur = 10;
+            ctx.fillRect(b.x - b.width / 2, b.y, b.width, b.height);
+            ctx.restore();
+
+            return b.y > -20;
+          });
+
+          // Enemy Bullets
+          enemyBullets = enemyBullets.filter(eb => {
+            eb.y += eb.vy;
+            eb.x += eb.vx || 0;
+
+            // Render Enemy Pulse
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(eb.x, eb.y, 4, 0, Math.PI * 2);
+            ctx.fillStyle = '#EF4444';
+            ctx.shadowColor = '#EF4444';
+            ctx.shadowBlur = 8;
+            ctx.fill();
+            ctx.restore();
+
+            // Collision with Player
+            const dist = Math.hypot(eb.x - player.x, eb.y - player.y);
+            if (dist < 20) {
+              damagePlayer(15);
+              addExplosionParticles(eb.x, eb.y, '#EF4444', 8);
+              return false;
+            }
+
+            return eb.y < h + 20;
+          });
+
+          // 6. UPDATE ENEMIES & COLLISIONS
+          enemies = enemies.filter(en => {
+            en.y += en.vy;
+            en.x += Math.sin((currentTime / 400) + en.phase) * en.wobble;
+
+            // Enemy Shooting
+            if (currentTime - en.lastShot >= en.fireInterval) {
+              enemyBullets.push({ x: en.x, y: en.y + 15, vy: 5 });
+              en.lastShot = currentTime;
+            }
+
+            // Render Enemy Ship
+            renderEnemyShip(ctx, en);
+
+            // Check Player Laser Hits
+            for (let i = bullets.length - 1; i >= 0; i--) {
+              const b = bullets[i];
+              if (Math.hypot(b.x - en.x, b.y - en.y) < en.radius + b.height / 2) {
+                en.hp -= b.damage || 25;
+                shotsHit++;
+                bullets.splice(i, 1);
+                addExplosionParticles(b.x, b.y, '#00F0FF', 4);
+                sound.playHit();
+
+                if (en.hp <= 0) {
+                  // Destroy Enemy
+                  destroyEnemy(en);
+                  return false;
+                }
+              }
+            }
+
+            // Player Ship Collision
+            if (Math.hypot(en.x - player.x, en.y - player.y) < en.radius + 18) {
+              damagePlayer(35);
+              destroyEnemy(en);
+              return false;
+            }
+
+            return en.y < h + 40;
+          });
+
+          // 7. UPDATE ASTEROIDS
+          asteroids = asteroids.filter(ast => {
+            ast.y += ast.vy;
+            ast.x += ast.vx;
+            ast.rot += ast.rotSpeed;
+
+            // Render Asteroid
+            ctx.save();
+            ctx.translate(ast.x, ast.y);
+            ctx.rotate(ast.rot);
+            ctx.beginPath();
+            ctx.arc(0, 0, ast.radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#1E293B';
+            ctx.fill();
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.restore();
+
+            // Check Player Laser Hits on Asteroid
+            for (let i = bullets.length - 1; i >= 0; i--) {
+              const b = bullets[i];
+              if (Math.hypot(b.x - ast.x, b.y - ast.y) < ast.radius) {
+                ast.hp -= 25;
+                bullets.splice(i, 1);
+                addExplosionParticles(b.x, b.y, '#94A3B8', 5);
+                sound.playHit();
+
+                if (ast.hp <= 0) {
+                  addExplosionParticles(ast.x, ast.y, '#94A3B8', 15);
+                  sound.playExplosion();
+                  score += 50;
+                  updateHUD();
+                  return false;
+                }
+              }
+            }
+
+            // Player Ship Collision
+            if (Math.hypot(ast.x - player.x, ast.y - player.y) < ast.radius + 16) {
+              damagePlayer(25);
+              addExplosionParticles(ast.x, ast.y, '#94A3B8', 12);
+              return false;
+            }
+
+            return ast.y < h + 50;
+          });
+
+          // 8. UPDATE POWER-UPS
+          powerups = powerups.filter(pw => {
+            pw.y += 1.5;
+
+            // Render Power-up capsule
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(pw.x, pw.y, 14, 0, Math.PI * 2);
+            ctx.fillStyle = pw.color + '33';
+            ctx.fill();
+            ctx.strokeStyle = pw.color;
+            ctx.lineWidth = 2;
+            ctx.shadowColor = pw.color;
+            ctx.shadowBlur = 10;
+            ctx.stroke();
+            ctx.font = 'bold 12px Inter, sans-serif';
+            ctx.fillStyle = '#FFFFFF';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(pw.symbol, pw.x, pw.y);
+            ctx.restore();
+
+            // Collect Powerup
+            if (Math.hypot(pw.x - player.x, pw.y - player.y) < 28) {
+              applyPowerup(pw);
+              return false;
+            }
+
+            return pw.y < h + 30;
+          });
+
+          // 9. UPDATE BOSS BATTLE
+          if (boss) {
+            updateBoss(ctx, dt, currentTime, w);
+          }
+
+          // 10. RENDER PLAYER STARFIGHTER
+          renderPlayerShip(ctx);
+
+          // 11. PARTICLES & FLOATING TEXTS
+          particles = particles.filter(p => {
+            p.x += p.vx; p.y += p.vy; p.life -= dt / p.maxLife;
+            if (p.life > 0) {
+              ctx.save();
+              ctx.beginPath();
+              ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+              ctx.fillStyle = p.color;
+              ctx.globalAlpha = p.life;
+              ctx.shadowColor = p.color;
+              ctx.shadowBlur = 6;
+              ctx.fill();
+              ctx.restore();
+              return true;
+            }
+            return false;
+          });
+
+          floatingTexts = floatingTexts.filter(ft => {
+            const age = currentTime - ft.created;
+            const progress = age / 800;
+            if (progress < 1) {
+              ctx.save();
+              ctx.font = 'bold 15px JetBrains Mono, monospace';
+              ctx.fillStyle = ft.color;
+              ctx.globalAlpha = 1 - progress;
+              ctx.shadowColor = ft.color;
+              ctx.shadowBlur = 6;
+              ctx.textAlign = 'center';
+              ctx.fillText(ft.text, ft.x, ft.y - progress * 40);
+              ctx.restore();
+              return true;
+            }
+            return false;
+          });
+
+          ctx.restore();
+        }
+
+        animationFrame = requestAnimationFrame(loop);
+      }
+
+      animationFrame = requestAnimationFrame(loop);
+    }
+
+    // WEAPON FIRING SYSTEM
+    function firePlayerGuns(currentTime) {
+      player.lastShotTime = currentTime;
+      shotsFired++;
+      sound.playLaser();
+
+      if (weaponLevel === 1) {
+        // Dual Plasma Blasters
+        bullets.push({ x: player.x - 10, y: player.y - 15, vy: -15, width: 3, height: 16, color: '#00F0FF', damage: 30 });
+        bullets.push({ x: player.x + 10, y: player.y - 15, vy: -15, width: 3, height: 16, color: '#00F0FF', damage: 30 });
+      } else if (weaponLevel === 2) {
+        // Twin Heavy Lasers
+        bullets.push({ x: player.x - 12, y: player.y - 15, vy: -16, width: 4, height: 20, color: '#38BDF8', damage: 45 });
+        bullets.push({ x: player.x + 12, y: player.y - 15, vy: -16, width: 4, height: 20, color: '#38BDF8', damage: 45 });
+      } else if (weaponLevel >= 3) {
+        // Triple Spread Cannons
+        bullets.push({ x: player.x, y: player.y - 20, vy: -18, width: 4, height: 22, color: '#00F0FF', damage: 50 });
+        bullets.push({ x: player.x - 14, y: player.y - 15, vy: -16, vx: -2.5, width: 3, height: 18, color: '#38BDF8', damage: 35 });
+        bullets.push({ x: player.x + 14, y: player.y - 15, vy: -16, vx: 2.5, width: 3, height: 18, color: '#38BDF8', damage: 35 });
+      }
+    }
+
+    // SUPER BOMB EMP
+    function deployBomb() {
+      if (!gameActive || gamePaused || bombsCount <= 0) return;
+      bombsCount--;
+      sound.playBomb();
+      screenShake = 20;
+
+      // Clear all enemy projectiles
+      enemyBullets = [];
+
+      // Massive damage to all enemies on screen
+      for (const en of enemies) {
+        destroyEnemy(en);
+      }
+      enemies = [];
+
+      for (const ast of asteroids) {
+        addExplosionParticles(ast.x, ast.y, '#94A3B8', 12);
+      }
+      asteroids = [];
+
+      if (boss) {
+        boss.hp -= 200;
+        sound.playExplosion();
+      }
+
+      addFloatingText(player.x, player.y - 40, "EMP SUPER NUKE!", "#EF4444");
+      updateHUD();
+    }
+
+    // SPAWNING SYSTEM
+    function spawnEnemyFleet(w) {
+      const isAsteroid = Math.random() < 0.35;
+      if (isAsteroid) {
+        asteroids.push({
+          x: 30 + Math.random() * (w - 60),
+          y: -40,
+          vx: (Math.random() - 0.5) * 1.5,
+          vy: 1.5 + Math.random() * 2,
+          radius: 16 + Math.random() * 18,
+          rot: 0,
+          rotSpeed: (Math.random() - 0.5) * 0.05,
+          hp: 40
+        });
+        return;
+      }
+
+      const types = ['drone', 'interceptor', 'cruiser'];
+      const chosen = types[Math.floor(Math.random() * types.length)];
+      const diffMult = DIFFS[selectedDiff].enemySpd;
+
+      let hp = 30, radius = 18, vy = 2 * diffMult, fireInterval = 2000, color = '#EF4444';
+      if (chosen === 'interceptor') {
+        hp = 50; radius = 22; vy = 2.8 * diffMult; fireInterval = 1400; color = '#F59E0B';
+      } else if (chosen === 'cruiser') {
+        hp = 110; radius = 28; vy = 1.2 * diffMult; fireInterval = 1000; color = '#A855F7';
+      }
+
+      enemies.push({
+        type: chosen,
+        x: 40 + Math.random() * (w - 80),
+        y: -40,
+        vy,
+        radius,
+        hp,
+        maxHp: hp,
+        color,
+        wobble: Math.random() * 3 + 1,
+        phase: Math.random() * 10,
+        lastShot: performance.now() + Math.random() * 1000,
+        fireInterval
+      });
+    }
+
+    function destroyEnemy(en) {
+      kills++;
+      waveKills++;
+      combo++;
+      bestCombo = Math.max(bestCombo, combo);
+
+      const d = DIFFS[selectedDiff];
+      const pts = Math.round((en.type === 'cruiser' ? 300 : en.type === 'interceptor' ? 200 : 100) * d.mult * (1 + combo * 0.1));
+      score += pts;
+
+      addExplosionParticles(en.x, en.y, en.color || '#EF4444', 18);
+      addFloatingText(en.x, en.y, `+${pts}`, '#00F0FF');
+      sound.playExplosion();
+
+      // Power-up Drop chance (20%)
+      if (Math.random() < 0.22) {
+        spawnPowerup(en.x, en.y);
+      }
+
+      // Check Wave Advancement
+      if (waveKills >= waveKillsNeeded && !boss) {
+        currentWave++;
+        waveKills = 0;
+        addFloatingText(window.innerWidth / 2, window.innerHeight / 2, `SECTOR WAVE ${currentWave}`, '#38BDF8');
+
+        // Spawn Boss on wave 4, 8, etc.
+        if (currentWave % 4 === 0) {
+          const canvas = document.getElementById('game-canvas');
+          spawnBoss(canvas.width);
+        }
+      }
+
+      updateHUD();
+    }
+
+    function spawnPowerup(x, y) {
+      const types = [
+        { type: 'weapon', symbol: 'P', color: '#00F0FF' },
+        { type: 'shield', symbol: 'S', color: '#3B82F6' },
+        { type: 'bomb', symbol: 'B', color: '#EF4444' },
+        { type: 'repair', symbol: '+', color: '#22C55E' }
+      ];
+      const p = types[Math.floor(Math.random() * types.length)];
+      powerups.push({ x, y, ...p });
+    }
+
+    function applyPowerup(pw) {
+      sound.playPowerup();
+      if (pw.type === 'weapon') {
+        weaponLevel = Math.min(3, weaponLevel + 1);
+        addFloatingText(player.x, player.y - 30, "WEAPON UPGRADED!", "#00F0FF");
+      } else if (pw.type === 'shield') {
+        player.shield = player.maxShield;
+        addFloatingText(player.x, player.y - 30, "SHIELDS OVERCHARGED!", "#3B82F6");
+      } else if (pw.type === 'bomb') {
+        bombsCount = Math.min(4, bombsCount + 1);
+        addFloatingText(player.x, player.y - 30, "+1 EMP BOMB!", "#EF4444");
+      } else if (pw.type === 'repair') {
+        player.hull = Math.min(player.maxHull, player.hull + 40);
+        addFloatingText(player.x, player.y - 30, "HULL REPAIRED!", "#22C55E");
+      }
+      updateHUD();
+    }
+
+    // BOSS SYSTEM
+    function spawnBoss(w) {
+      boss = {
+        x: w / 2,
+        y: -100,
+        targetY: 120,
+        width: 130,
+        height: 80,
+        hp: 1200 + currentWave * 400,
+        maxHp: 1200 + currentWave * 400,
+        phase: 0,
+        lastAttack: performance.now(),
+        attackInterval: 1200
+      };
+      document.getElementById('boss-hud-container').classList.remove('hidden');
+      screenShake = 15;
+    }
+
+    function updateBoss(ctx, dt, currentTime, w) {
+      if (!boss) return;
+
+      // Entrance animation
+      if (boss.y < boss.targetY) {
+        boss.y += dt * 80;
+      } else {
+        boss.x = w / 2 + Math.sin(currentTime / 800) * (w * 0.3);
+      }
+
+      // Boss Attacks
+      if (currentTime - boss.lastAttack >= boss.attackInterval) {
+        // Multi-barrel spread
+        for (let a = -2; a <= 2; a++) {
+          enemyBullets.push({ x: boss.x + a * 25, y: boss.y + 40, vy: 4.5, vx: a * 1.2 });
+        }
+        boss.lastAttack = currentTime;
+      }
+
+      // Render Boss Dreadnought
+      ctx.save();
+      ctx.fillStyle = '#831843';
+      ctx.shadowColor = '#EF4444';
+      ctx.shadowBlur = 18;
+
+      // Dreadnought Hull
+      ctx.beginPath();
+      ctx.moveTo(boss.x, boss.y + 50);
+      ctx.lineTo(boss.x - 65, boss.y - 30);
+      ctx.lineTo(boss.x - 30, boss.y - 45);
+      ctx.lineTo(boss.x + 30, boss.y - 45);
+      ctx.lineTo(boss.x + 65, boss.y - 30);
+      ctx.closePath();
+      ctx.fill();
+
+      // Glowing Reactor Core
+      ctx.beginPath();
+      ctx.arc(boss.x, boss.y - 5, 18, 0, Math.PI * 2);
+      ctx.fillStyle = '#EF4444';
+      ctx.shadowBlur = 25;
+      ctx.fill();
+      ctx.restore();
+
+      // Check Hits on Boss
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        const b = bullets[i];
+        if (Math.hypot(b.x - boss.x, b.y - boss.y) < 55) {
+          boss.hp -= b.damage || 30;
+          shotsHit++;
+          bullets.splice(i, 1);
+          addExplosionParticles(b.x, b.y, '#EF4444', 4);
+          sound.playHit();
+
+          if (boss.hp <= 0) {
+            // Boss Defeated!
+            destroyBoss();
+            return;
+          }
+        }
+      }
+
+      // Update Boss HUD
+      const pct = Math.max(0, Math.round((boss.hp / boss.maxHp) * 100));
+      document.getElementById('boss-hp-num').textContent = `${pct}%`;
+      document.getElementById('boss-hp-bar').style.width = `${pct}%`;
+    }
+
+    function destroyBoss() {
+      addExplosionParticles(boss.x, boss.y, '#EF4444', 60);
+      sound.playExplosion();
+      score += 5000 * DIFFS[selectedDiff].mult;
+      boss = null;
+      document.getElementById('boss-hud-container').classList.add('hidden');
+      addFloatingText(window.innerWidth / 2, window.innerHeight / 2, "DREADNOUGHT DESTROYED!", "#00F0FF");
+      currentWave++;
+      updateHUD();
+    }
+
+    // DAMAGE PLAYER
+    function damagePlayer(amount) {
+      if (player.invulnerable > 0) return;
+
+      screenShake = 12;
+      sound.playHit();
+
+      if (player.shield > 0) {
+        player.shield -= amount;
+        if (player.shield < 0) {
+          player.hull += player.shield; // Overflow to hull
+          player.shield = 0;
+        }
+      } else {
+        player.hull -= amount;
+      }
+
+      combo = 0; // Reset streak
+      updateHUD();
+
+      if (player.hull <= 0) {
+        endGame();
+      }
+    }
+
+    // RENDER FUNCTIONS
+    function renderPlayerShip(ctx) {
+      ctx.save();
+      ctx.translate(player.x, player.y);
+
+      // Tilt angle based on horizontal velocity
+      const tilt = (player.vx / player.speed) * 0.35;
+      ctx.rotate(tilt);
+
+      // Invulnerability flashing
+      if (player.invulnerable > 0 && Math.floor(performance.now() / 80) % 2 === 0) {
+        ctx.globalAlpha = 0.5;
+      }
+
+      // Shield Aura
+      if (player.shield > 0) {
+        ctx.beginPath();
+        ctx.arc(0, 0, 32, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(0, 240, 255, ${player.shield / 120})`;
+        ctx.lineWidth = 2;
+        ctx.shadowColor = '#00F0FF';
+        ctx.shadowBlur = 14;
+        ctx.stroke();
+      }
+
+      // Ship Main Hull (Cyber Interceptor)
+      ctx.beginPath();
+      ctx.moveTo(0, -22); // Nose
+      ctx.lineTo(-18, 14); // Left wing
+      ctx.lineTo(-6, 8);
+      ctx.lineTo(0, 18); // Engine center
+      ctx.lineTo(6, 8);
+      ctx.lineTo(18, 14); // Right wing
+      ctx.closePath();
+
+      ctx.fillStyle = '#1E3A8A';
+      ctx.fill();
+      ctx.strokeStyle = '#38BDF8';
+      ctx.lineWidth = 2;
+      ctx.shadowColor = '#38BDF8';
+      ctx.shadowBlur = 10;
+      ctx.stroke();
+
+      // Cockpit Glow
+      ctx.beginPath();
+      ctx.arc(0, -4, 4.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#00F0FF';
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function renderEnemyShip(ctx, en) {
+      ctx.save();
+      ctx.translate(en.x, en.y);
+      ctx.fillStyle = en.color;
+      ctx.shadowColor = en.color;
+      ctx.shadowBlur = 10;
+
+      ctx.beginPath();
+      if (en.type === 'drone') {
+        ctx.moveTo(0, 16);
+        ctx.lineTo(-14, -12);
+        ctx.lineTo(14, -12);
+      } else if (en.type === 'interceptor') {
+        ctx.moveTo(0, 20);
+        ctx.lineTo(-18, -14);
+        ctx.lineTo(0, -6);
+        ctx.lineTo(18, -14);
+      } else {
+        // Cruiser
+        ctx.moveTo(0, 24);
+        ctx.lineTo(-24, 0);
+        ctx.lineTo(-14, -20);
+        ctx.lineTo(14, -20);
+        ctx.lineTo(24, 0);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function addEngineThrust(x, y, vx) {
+      for (let i = 0; i < 2; i++) {
+        particles.push({
+          x: x + (Math.random() - 0.5) * 6,
+          y: y,
+          vx: -vx * 0.2 + (Math.random() - 0.5) * 1,
+          vy: 4 + Math.random() * 4,
+          life: 1,
+          maxLife: 0.2,
+          color: Math.random() > 0.4 ? '#00F0FF' : '#38BDF8',
+          size: 3
+        });
+      }
+    }
+
+    function addExplosionParticles(x, y, color, count) {
+      for (let i = 0; i < count; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const s = 1 + Math.random() * 5;
+        particles.push({
+          x, y,
+          vx: Math.cos(a) * s,
+          vy: Math.sin(a) * s,
+          life: 1,
+          maxLife: 0.4 + Math.random() * 0.3,
+          color,
+          size: 3 + Math.random() * 2
+        });
+      }
+    }
+
+    function addFloatingText(x, y, text, color) {
+      floatingTexts.push({ x, y, text, color, created: performance.now() });
+    }
+
+    function updateHUD() {
+      document.getElementById('hud-score').textContent = score.toLocaleString();
+      document.getElementById('hud-wave-label').textContent = `WAVE ${currentWave}`;
+      document.getElementById('hud-shield-num').textContent = `${Math.max(0, Math.round(player.shield))}%`;
+      document.getElementById('hud-shield-bar').style.width = `${Math.max(0, player.shield)}%`;
+      document.getElementById('hud-hull-num').textContent = `${Math.max(0, Math.round(player.hull))} HP`;
+      document.getElementById('hud-hull-bar').style.width = `${Math.max(0, player.hull)}%`;
+
+      document.getElementById('hud-weapon-tier').textContent = weaponLevel === 1 ? 'LVL 1 DUAL PLASMA' : weaponLevel === 2 ? 'LVL 2 TWIN HEAVY' : 'LVL 3 TRIPLE ARRAY';
+
+      // Bombs indicator
+      const bContainer = document.getElementById('hud-bombs-container');
+      bContainer.innerHTML = Array.from({ length: bombsCount }).map(() => `
+        <span class="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_6px_#EF4444]"></span>
+      `).join('');
+
+      const cBadge = document.getElementById('hud-combo-badge');
+      if (combo > 1) {
+        cBadge.classList.remove('hidden');
+        cBadge.textContent = `KILL STREAK ×${combo}`;
+      } else {
+        cBadge.classList.add('hidden');
+      }
+    }
+
+    function pauseGame() { gamePaused = true; sound.stopMusic(); document.getElementById('pause-modal').classList.remove('hidden'); }
+    function resumeGame() { gamePaused = false; sound.startSpaceMusic(); document.getElementById('pause-modal').classList.add('hidden'); }
+    function restartGame() { startSelectedGame(); }
+
+    function endGame() {
+      gameActive = false;
+      sound.stopMusic();
+      const acc = shotsFired > 0 ? (shotsHit / shotsFired) * 100 : 0;
+      let grade = 'D';
+      if (score >= 20000 && acc >= 75) grade = 'S+';
+      else if (score >= 12000) grade = 'S';
+      else if (score >= 6000) grade = 'A';
+      else if (score >= 3000) grade = 'B';
+      else if (score >= 1000) grade = 'C';
+
+      document.getElementById('res-mode-badge').textContent = `${MODES[selectedMode].name.toUpperCase()} • ${DIFFS[selectedDiff].name.toUpperCase()}`;
+      document.getElementById('res-grade-badge').textContent = grade;
+      document.getElementById('res-score').textContent = score.toLocaleString();
+      document.getElementById('res-kills').textContent = kills;
+      document.getElementById('res-waves').textContent = `Wave ${currentWave}`;
+      document.getElementById('res-streak').textContent = `${bestCombo}x`;
+      document.getElementById('res-accuracy').textContent = `${acc.toFixed(1)}%`;
+      document.getElementById('results-modal').classList.remove('hidden');
+
+      if (grade === 'S+' || grade === 'S') {
+        confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+      }
+
+      saveStatsLocally(score, kills, bestCombo);
+    }
+
+    function saveStatsLocally(sc, kl, cb) {
+      let st = JSON.parse(localStorage.getItem('pe_space_stats') || '{"name":"Ace Pilot","games":0,"kills":0,"bestScore":0,"bestCombo":0,"careerScore":0}');
+      st.games++;
+      st.kills += kl;
+      st.careerScore += sc;
+      st.bestScore = Math.max(st.bestScore, sc);
+      st.bestCombo = Math.max(st.bestCombo, cb);
+      localStorage.setItem('pe_space_stats', JSON.stringify(st));
+    }
+
+    function saveMatchScore() {
+      const name = document.getElementById('res-player-name').value.trim() || 'Ace Pilot';
+      let lb = JSON.parse(localStorage.getItem('pe_space_lb') || '[]');
+      lb.unshift({ name, mode: selectedMode, diff: selectedDiff, score, kills, grade: document.getElementById('res-grade-badge').textContent });
+      localStorage.setItem('pe_space_lb', JSON.stringify(lb.slice(0, 30)));
+      document.getElementById('res-save-btn').textContent = 'Saved!';
+      document.getElementById('res-save-btn').disabled = true;
+    }
+
+    function renderLeaderboard() {
+      const lb = JSON.parse(localStorage.getItem('pe_space_lb') || '[]');
+      const seeded = [
+        { name: "ApexStar_99", mode: "classic", diff: "extreme", score: 38450, kills: 142, grade: "S+" },
+        { name: "NovaVanguard", mode: "boss-rush", diff: "hard", score: 29200, kills: 98, grade: "S+" },
+        { name: "NebulaGhost", mode: "survival", diff: "extreme", score: 24800, kills: 110, grade: "S+" },
+        { name: "SolarStriker", mode: "classic", diff: "hard", score: 18950, kills: 74, grade: "S" },
+      ];
+      const all = [...lb, ...seeded].sort((a,b) => b.score - a.score);
+      document.getElementById('leaderboard-tbody').innerHTML = all.map((e, idx) => `
+        <tr class="hover:bg-white/5">
+          <td class="py-3 px-4 font-bold text-slate-300">#${idx+1}</td>
+          <td class="py-3 px-4 font-sans font-bold text-white">${e.name}</td>
+          <td class="py-3 px-4 uppercase text-cyan-300">${e.mode}</td>
+          <td class="py-3 px-4 uppercase text-prime-blue-light">${e.diff}</td>
+          <td class="py-3 px-4 text-right font-black text-white">${e.score.toLocaleString()}</td>
+          <td class="py-3 px-4 text-right text-emerald-400">${e.kills} Kills</td>
+          <td class="py-3 px-4 text-center font-sans font-bold text-cyan-300">${e.grade}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderProfile() {
+      const st = JSON.parse(localStorage.getItem('pe_space_stats') || '{"name":"Ace Pilot","games":0,"kills":0,"bestScore":0,"bestCombo":0,"careerScore":0}');
+      const lvl = Math.floor(Math.sqrt(st.careerScore / 1500)) + 1;
+      document.getElementById('prof-name').textContent = st.name;
+      document.getElementById('prof-level').textContent = lvl;
+      document.getElementById('prof-career-score').textContent = st.careerScore.toLocaleString();
+      document.getElementById('prof-games').textContent = st.games;
+      document.getElementById('prof-kills').textContent = st.kills;
+      document.getElementById('prof-best-score').textContent = st.bestScore.toLocaleString();
+      document.getElementById('prof-best-combo').textContent = `${st.bestCombo}x`;
+    }
+  </script>
+</body>
+</html>
